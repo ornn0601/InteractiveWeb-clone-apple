@@ -22,8 +22,13 @@
         messageB: document.querySelector('#scroll-section-0 .main-message.b'),
         messageC: document.querySelector('#scroll-section-0 .main-message.c'),
         messageD: document.querySelector('#scroll-section-0 .main-message.d'),
+        canvas: document.querySelector('#video-canvas-0'),
+        context: document.querySelector('#video-canvas-0').getContext('2d'),
+        videoImages: []
       },
       values: { // 변화를 줄 요소에 적용될 내용
+        videoImageCount: 300,
+        imageSequence: [0, 299],
         messageA_opacity_in: [0, 1, {start: 0.1, end: 0.2}], // 시작값, 끝값 (%)
         messageB_opacity_in: [0, 1, {start: 0.3, end: 0.4}],
         messageC_opacity_in: [0, 1, {start: 0.5, end: 0.6}],
@@ -108,6 +113,17 @@
       }
     }
   ];
+
+  function setCanvasImage() {
+    let imgElem;
+    for (let i = 0; i < sceneInfo[0].values.videoImageCount; i++) {
+      imgElem = new Image();
+      imgElem.src = `./video/001/IMG_${6726 + i}.jpg`;
+      sceneInfo[0].objs.videoImages.push(imgElem);
+    }
+  }
+  setCanvasImage();
+
 
   // 레이아웃 초기화
   function setLayout() {
