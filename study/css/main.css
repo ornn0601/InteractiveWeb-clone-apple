@@ -72,12 +72,14 @@ a {
 /* content section - start */
 .scroll-section {
   padding-top: 50vh;
-  border: 3px solid red;
 }
 
 #scroll-section-0 h1 {
   font-size: 4rem;
   text-align: center;
+  position: relative;
+  top: -10vh;
+  z-index: 5;
 }
 .main-message {
   display: flex;
@@ -121,6 +123,7 @@ a {
 .desc-message {
   width: 50%;
   font-weight: bold;
+  opacity: 0;
 }
 .pin {
   width: 1px;
@@ -184,7 +187,22 @@ a {
 
 .sticky-elem-canvas {
   top: 0;
+  height: 100%;
   background-color: #ccc;
+}
+.sticky-elem-canvas canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.image-blend-canvas {
+}
+
+#scroll-section-3 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 @media (min-width: 1024px) {
