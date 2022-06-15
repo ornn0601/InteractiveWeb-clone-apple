@@ -71,6 +71,7 @@ a {
 
 /* content section - start */
 .scroll-section {
+  position: relative;
   padding-top: 50vh;
 }
 
@@ -188,7 +189,7 @@ a {
 .sticky-elem-canvas {
   top: 0;
   height: 100%;
-  background-color: #ccc;
+  /* background-color: #ccc; */
 }
 .sticky-elem-canvas canvas {
   position: absolute;
@@ -196,7 +197,9 @@ a {
   left: 50%;
 }
 
-.image-blend-canvas {
+.image-blend-canvas.sticky {
+  position: fixed;
+  top: 0;
 }
 
 #scroll-section-3 {
