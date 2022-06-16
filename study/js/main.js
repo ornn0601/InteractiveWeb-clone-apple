@@ -7,6 +7,10 @@
   let prevScrollHeight = 0; // 현재 스크롤 위치(yOffset)보다 이전에 위치한 스크롤 섹션들의 스크롤 높이의 합
   let currentScene = 0; // 현재 활성화된(눈 앞에 보고 있는) 씬(scroll-seciton)
   let enterNewScene = false; // 새로운 scene이 시작되는 순간 true
+  let acc = 0.1;
+  let delayedYOffset = 0;
+  let rafId;
+  let rafState;
 
   // 애니메이션에 대한 정보를 배열, 객체에 담는다.
   // 스크롤 높이 정보(애니메이션 구간)를 정의한다.
@@ -128,6 +132,8 @@
         rect2X: [0, 0, {start: 0, end: 0}],
         blendHeight: [0, 0, {start: 0, end: 0}],
         canvas_scale: [0, 0, {start: 0, end: 0}],
+        canvasCaption_opacity: [0, 1, {start: 0, end: 0}],
+        canvasCaption_translateY: [20, 0, {start: 0, end: 0}],
         rectStartY: 0,
       }
     }
@@ -155,7 +161,14 @@
       sceneInfo[3].objs.images.push(imgElem3);
     }
   }
-  setCanvasImage();
+
+  function checkMenu() {
+    if (yOffset > 44) {
+      document.body.classList.add('local-nav-sticky');
+    } else {
+      document.body.classList.remove('local-nav-sticky');
+    }
+  }
 
 
   // 레이아웃 초기화
@@ -228,8 +241,8 @@
     switch (currentScene) {
       case 0:
 
-        let sequence = Math.round(calcValues(values.imageSequence, currentYOffset));
-        objs.context.drawImage(objs.videoImages[sequence], 0, 0);
+        // let sequence = Math.round(calcValues(values.imageSequence, currentYOffset));
+        // objs.context.drawImage(objs.videoImages[sequence], 0, 0);
         objs.canvas.style.opacity = calcValues(values.canvas_opacity, currentYOffset);
 
         if (scrollRatio <= 0.22) {
@@ -274,8 +287,8 @@
         break;
 
       case 2:
-        let sequence2 = Math.round(calcValues(values.imageSequence, currentYOffset));
-        objs.context.drawImage(objs.videoImages[sequence2], 0, 0);
+        // let sequence2 = Math.round(calcValues(values.imageSequence, currentYOffset));
+        // objs.context.drawImage(objs.videoImages[sequence2], 0, 0);
 
         if (scrollRatio <= 0.5) {
           // in
@@ -444,10 +457,33 @@
           objs.canvas.classList.add('sticky');
           objs.canvas.style.top = `${-(objs.canvas.height - objs.canvas.height * canvasScaleRatio) / 2}px`;
 
+          // 블렌드 진행
           if (scrollRatio > values.blendHeight[2].end) {
+            values.canvas_scale[0] = canvasScaleRatio;
+            values.canvas_scale[1] = document.body.offsetWidth / (1.5 * objs.canvas.width);
+            values.canvas_scale[2].start = values.blendHeight[2].end;
+            values.canvas_scale[2].end = values.canvas_scale[2].start + 0.2;
             
+            objs.canvas.style.transform = `scale(${calcValues(values.canvas_scale, currentYOffset)})`;
+            objs.canvas.style.marginTop = 0;
           }
 
+          // 블렌드 끝난 후 스크롤 시작
+          if (scrollRatio > values.canvas_scale[2].end 
+            && values.canvas_scale[2].end > 0) {
+              objs.canvas.classList.remove('sticky');
+              objs.canvas.style.marginTop = `${scrollHeight * 0.4}px`;
+
+              // 하단 글
+              values.canvasCaption_opacity[2].start = values.canvas_scale[2].end;
+              values.canvasCaption_opacity[2].end = values.canvasCaption_opacity[2].start + 0.1;
+
+              values.canvasCaption_translateY[2].start = values.canvasCaption_opacity[2].start;
+              values.canvasCaption_translateY[2].end = values.canvasCaption_opacity[2].end;
+
+              objs.canvasCaption.style.opacity = calcValues(values.canvasCaption_opacity, currentYOffset);
+              objs.canvasCaption.style.transform = `translate3d(0, ${calcValues(values.canvasCaption_translateY, currentYOffset)}%, 0)`;
+            }
         }
 
         break;
@@ -462,13 +498,25 @@
       prevScrollHeight += sceneInfo[i].scrollHeight;
     }
 
-    if (yOffset > prevScrollHeight + sceneInfo[currentScene].scrollHeight) {
+    if (delayedYOffset < prevScrollHeight + sceneInfo[currentScene].scrollHeight) {
+      document.body.classList.remove('scroll-effect-end');
+    }
+
+    if (delayedYOffset > prevScrollHeight + sceneInfo[currentScene].scrollHeight) {
       enterNewScene = true;
-      currentScene++;
+
+      // scroll-effect-end
+      if (currentScene === sceneInfo.length - 1) {
+        document.body.classList.add('scroll-effect-end');
+      }
+      if (currentScene < sceneInfo.length - 1) {
+        currentScene++;
+      }
+
       document.body.setAttribute('id', `show-scene-${currentScene}`);
     }
 
-    if (yOffset < prevScrollHeight) {
+    if (delayedYOffset < prevScrollHeight) {
       enterNewScene = true;
       if (currentScene === 0) return; // 브라우저 바운스 효과로 인해 마이너스가 되는 것을 방지(모바일)
       currentScene--;
@@ -480,19 +528,90 @@
     playAnimation();
   }
 
-  // 이벤트 적용
-  window.addEventListener('resize', setLayout);
-  window.addEventListener('scroll', ()=> { // 함수들을 호출한다.
-    yOffset = window.pageYOffset; // 직관적으로 보이게
-    scrollLoop();
-  })
+  // 부드러운 스크롤
+  function loop() {
+    delayedYOffset = delayedYOffset + (yOffset - delayedYOffset) * acc;
+
+    if (!enterNewScene) {
+      if (currentScene === 0 || currentScene === 2) {
+        const currentYOffset = delayedYOffset - prevScrollHeight;
+        const objs = sceneInfo[currentScene].objs;
+        const values = sceneInfo[currentScene].values;
+
+        let sequence = Math.round(calcValues(values.imageSequence,  currentYOffset));
+        if (objs.videoImages[sequence]) {
+          objs.context.drawImage(objs.videoImages[sequence], 0, 0);
+        }
+      }
+    }
+    
+    rafId = requestAnimationFrame(loop);
+  
+    if (Math.abs(yOffset - delayedYOffset) < 1 ) {
+      cancelAnimationFrame(rafId);
+      rafState = false;
+    }
+  }
+
+  // 이벤트 *************************************
   // 웹페이지에 있는 모든 리소스(이미지 포함)를 로드하고 실행
   window.addEventListener('load', ()=> {
+
+    document.body.classList.remove('before-load');
     setLayout();
     sceneInfo[0].objs.context.drawImage(sceneInfo[0].objs.videoImages[0], 0, 0);
+
+    // 중간 새로고침 시 요소 활성화 : 스크롤 자동
+    let tempYOffset = yOffset;
+    let tempScrollCount = 0;
+    if (yOffset > 0) {
+      let siId = setInterval(()=>{
+        window.scrollTo(0, tempYOffset);
+        tempYOffset += 5
+
+        if (tempScrollCount > 20) {
+          clearInterval(siId);
+        }
+        tempScrollCount++;
+      }, 20);
+    }
+
+    // 이벤트 적용
+    window.addEventListener('resize', setLayout);
+    window.addEventListener('scroll', ()=> { // 함수들을 호출한다.
+      yOffset = window.pageYOffset; // 직관적으로 보이게
+      scrollLoop();
+      checkMenu();
+  
+      if (!rafState) {
+        rafId = requestAnimationFrame(loop);
+        rafState = true;
+      }
+    });
+
+    // DOMContent 리소스를 로드하고 실행 (load보다 좀 더 빠름)
+    // window.addEventListener('DOMContentLoaded', setLayout);
+    window.addEventListener('resize', ()=> {
+      if (window.innerWidth > 900) {
+        scrollTo(0, 0);
+        window.location.reload();
+      }
+    });
+
+    // 모바일 가로/세로 변환
+    window.addEventListener('orientationchange', ()=> {
+      scrollTo(0, 0);
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    });
+
+    // 로딩 아이콘 삭제
+    document.querySelector('.loading').addEventListener('transitionend', (e)=> {
+      document.body.removeChild(e.currentTarget);
+    });
   });
-  // DOMContent 리소스를 로드하고 실행 (load보다 좀 더 빠름)
-  // window.addEventListener('DOMContentLoaded', setLayout);
-  window.addEventListener('resize', setLayout);
+
+  setCanvasImage();
 
 })();
