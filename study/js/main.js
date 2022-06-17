@@ -555,7 +555,8 @@
 
   // 이벤트 *************************************
   // 웹페이지에 있는 모든 리소스(이미지 포함)를 로드하고 실행
-  window.addEventListener('load', ()=> {
+  // window.addEventListener('load', ()=> {
+  window.addEventListener('DOMContentLoaded', ()=> {
 
     document.body.classList.remove('before-load');
     setLayout();
